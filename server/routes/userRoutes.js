@@ -24,7 +24,7 @@ router.post('/create', async (req, res) => {
         // Update the username if user exists
         user.username = username;
         await user.save();
-        res.status(200).json({success: true, message: 'Username set succesfully', user})
+        res.status(200).json({success: true, message: 'Username set successfully', user})
     } catch (error) {
         console.error(error);
         res.status(500).json({success: false, message: 'Server error', error});

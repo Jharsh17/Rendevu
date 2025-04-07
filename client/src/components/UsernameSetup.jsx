@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { getAuth } from "firebase/auth";
 
 const UsernameSetup = ({ userId, onUsernameSet }) => {
     const [username, setUsername] = useState('');
@@ -6,20 +7,35 @@ const UsernameSetup = ({ userId, onUsernameSet }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        try {
+            // fetch email from Firebase Auth
+            const auth = getAuth();
+            const user = auth.currentUser;
 
-        const res = await fetch('/api/create', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId, username })
-        });
+            if(!user || user.uid !== userId) {
+                throw new Error("User not authenticated or mismatched userId");
+            }
 
-        const data = await res.json();
-
-        if (data.success) {
-            onUsernameSet(username);
-        } else {
-            setError(data.message);
-        }
+            const email = user.email;
+            
+            const res = await fetch('/api/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ firebaseUID: userId, username, email})
+            });
+    
+            const data = await res.json();
+    
+            if (data.success) {
+                onUsernameSet(username);
+            } else {
+                setError(data.message);
+            }
+        } catch (err) {
+            console.error(err);
+            setError("Failed to fetch email or set username");
+        }        
     };
 
     return (

@@ -2,31 +2,32 @@ const express = require('express');
 const router = express.Router();
 const Message = require('../models/Message');
 
-// Get messages for a channel
-router.get('/:channelId', async (req, res) => {
+// Create a new message
+router.post('/create', async (req, res) => {
     try {
-        const messages = await Message.find({ channelId: req.params.channelId }).sort({ createdAt: 1 });
-        res.json(messages);
+        const { content, sender, channel } = req.body;
+
+        const message = new Message({ content, sender, channel });
+        const savedMessage = await message.save();
+
+        res.status(201).json(savedMessage);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.error("Error creating message:", err);
+        res.status(500).json({ message: "Failed to create message", error: err.message });
     }
 });
 
-// Send a message
-router.post('/', async (req, res) => {
-    const { channelId, userId, userName, userImage, content } = req.body;
+// Get messages for a specific channel
+router.get('/channel/:channelId', async (req, res) => {
     try {
-        const newMessage = new Message({
-            channelId,
-            userId,
-            userName,
-            userImage,
-            content,
-        });
-        await newMessage.save();
-        res.status(201).json(newMessage);
+        const messages = await Message.find({ channel: req.params.channelId })
+            .populate('sender', 'username')
+            .sort({ createdAt: 1 });
+
+        res.status(200).json(messages);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.error("Error fetching messages:", err);
+        res.status(500).json({ message: "Failed to fetch messages", error: err.message });
     }
 });
 

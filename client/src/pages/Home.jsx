@@ -20,7 +20,9 @@ const Home = ({ userId }) => {
                         <h2 className="text-xl font-semibold mb-4 text-gray-700">
                             Welcome, {username}!
                         </h2>
-                        <AddFriend />
+                        <div className="absolute top-4 right-4">
+                            <AddFriend />
+                        </div>
                     </div>
                 )}
             </div>

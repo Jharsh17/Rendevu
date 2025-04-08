@@ -5,29 +5,29 @@ const User = require('../models/User');
 // Create a new user
 router.post('/create', async (req, res) => {
     try {
-        const { username, email, avatar } = req.body;
-
-        // Basic validation
-        if (!username || !email) {
-            return res.status(400).json({ message: "Username and email are required." });
+        const {firebaseUID, email, username} = req.body;
+        // Check if the username already exists
+        const existingUsername = await User.findOne({username});
+        if(existingUsername) {
+            return res.status(400).json({success: false, message: 'Username is already taken'});
         }
 
-        // Check for existing user
-        const existingUser = await User.findOne({ $or: [{ email }, { username }] });
-        if (existingUser) {
-            return res.status(409).json({
-                message: existingUser.email === email
-                    ? "Email is already in use."
-                    : "Username is already taken."
-            });
+        // Check if user exists in mongodb
+        let user = await User.findOne({firebaseUID});
+        if(!user){
+            // Create a new user if it doesn't exist
+            user = new User({firebaseUID, email, username, avatar: '', servers: [], friends: []});
+            await user.save();
+            return res.status(201).json({success: true, message: 'Username set successfully', user});
         }
 
-        const newUser = new User({ username, email, avatar });
-        const savedUser = await newUser.save();
-        res.status(201).json(savedUser);
-    } catch (err) {
-        console.error("Error creating user:", err);
-        res.status(500).json({ message: "Internal server error", error: err.message });
+        // Update the username if user exists
+        user.username = username;
+        await user.save();
+        res.status(200).json({success: true, message: 'Username set succesfully', user})
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({success: false, message: 'Server error', error});
     }
 });
 

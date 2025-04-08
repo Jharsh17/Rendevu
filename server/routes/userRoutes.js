@@ -5,12 +5,29 @@ const User = require('../models/User');
 // Create a new user
 router.post('/create', async (req, res) => {
     try {
-        const { username, email, profilePicture } = req.body;
-        const newUser = new User({ username, email, profilePicture });
+        const { username, email, avatar } = req.body;
+
+        // Basic validation
+        if (!username || !email) {
+            return res.status(400).json({ message: "Username and email are required." });
+        }
+
+        // Check for existing user
+        const existingUser = await User.findOne({ $or: [{ email }, { username }] });
+        if (existingUser) {
+            return res.status(409).json({
+                message: existingUser.email === email
+                    ? "Email is already in use."
+                    : "Username is already taken."
+            });
+        }
+
+        const newUser = new User({ username, email, avatar });
         const savedUser = await newUser.save();
         res.status(201).json(savedUser);
     } catch (err) {
-        res.status(500).json({ message: 'Server Error', error: err.message });
+        console.error("Error creating user:", err);
+        res.status(500).json({ message: "Internal server error", error: err.message });
     }
 });
 
@@ -18,10 +35,13 @@ router.post('/create', async (req, res) => {
 router.get('/:id', async (req, res) => {
     try {
         const user = await User.findById(req.params.id);
-        if (!user) return res.status(404).json({ message: 'User not found' });
+        if (!user) {
+            return res.status(404).json({ message: "User not found." });
+        }
         res.status(200).json(user);
     } catch (err) {
-        res.status(500).json({ message: 'Server Error', error: err.message });
+        console.error("Error fetching user by ID:", err);
+        res.status(500).json({ message: "Internal server error", error: err.message });
     }
 });
 
@@ -31,31 +51,36 @@ router.get('/', async (req, res) => {
         const users = await User.find();
         res.status(200).json(users);
     } catch (err) {
-        res.status(500).json({ message: 'Server Error', error: err.message });
+        console.error("Error fetching all users:", err);
+        res.status(500).json({ message: "Internal server error", error: err.message });
     }
 });
 
 // Update user
 router.put('/:id', async (req, res) => {
     try {
-        const updatedUser = await User.findByIdAndUpdate(
-            req.params.id,
-            req.body,
-            { new: true }
-        );
+        const updatedUser = await User.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        if (!updatedUser) {
+            return res.status(404).json({ message: "User not found." });
+        }
         res.status(200).json(updatedUser);
     } catch (err) {
-        res.status(500).json({ message: 'Server Error', error: err.message });
+        console.error("Error updating user:", err);
+        res.status(500).json({ message: "Internal server error", error: err.message });
     }
 });
 
 // Delete user
 router.delete('/:id', async (req, res) => {
     try {
-        await User.findByIdAndDelete(req.params.id);
-        res.status(200).json({ message: 'User deleted' });
+        const deletedUser = await User.findByIdAndDelete(req.params.id);
+        if (!deletedUser) {
+            return res.status(404).json({ message: "User not found." });
+        }
+        res.status(200).json({ message: "User deleted successfully." });
     } catch (err) {
-        res.status(500).json({ message: 'Server Error', error: err.message });
+        console.error("Error deleting user:", err);
+        res.status(500).json({ message: "Internal server error", error: err.message });
     }
 });
 

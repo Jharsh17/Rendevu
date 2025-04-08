@@ -1,14 +1,25 @@
 const express = require('express');
 const router = express.Router();
 const DirectMessage = require('../models/DirectMessage');
+const User = require('../models/User');
 
-// Create or append message in a DM thread
 router.post('/', async (req, res) => {
     const { senderId, receiverId, content } = req.body;
 
     try {
-        // Ensure sender and receiver are sorted for consistent matching
-        const participants = [senderId, receiverId].sort();
+        if (!content || typeof content !== 'string' || content.trim() === '') {
+            return res.status(400).json({ message: "Message content is required" });
+        }
+
+        // Validate users
+        const sender = await User.findById(senderId);
+        const receiver = await User.findById(receiverId);
+
+        if (!sender || !receiver) {
+            return res.status(404).json({ message: "Sender or receiver not found" });
+        }
+
+        const participants = [senderId.toString(), receiverId.toString()].sort();
 
         let dmThread = await DirectMessage.findOne({ participants });
 
@@ -19,10 +30,8 @@ router.post('/', async (req, res) => {
         };
 
         if (dmThread) {
-            // Append message to existing thread
             dmThread.messages.push(newMessage);
         } else {
-            // Create a new thread
             dmThread = new DirectMessage({
                 participants,
                 messages: [newMessage]

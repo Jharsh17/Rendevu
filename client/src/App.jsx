@@ -30,7 +30,7 @@ const App = () => {
     <Router>
       <Routes>
         <Route path="/" element={!user ? <Login/> : <Home />} />
-        <Route path="/home" element={<Home />} />
+        <Route path="/home" element={<Home userId={user?.uid}/>} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
       </Routes>

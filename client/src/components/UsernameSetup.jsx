@@ -19,7 +19,7 @@ const UsernameSetup = ({ userId, onUsernameSet }) => {
 
             const email = user.email;
             
-            const res = await fetch('/api/create', {
+            const res = await fetch('/api/users/create', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ firebaseUID: userId, username, email})

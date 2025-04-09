@@ -32,9 +32,10 @@ router.post('/create', async (req, res) => {
 });
 
 // Get user by ID
-router.get('/:id', async (req, res) => {
+router.get('/:userId', async (req, res) => {
     try {
-        const user = await User.findById(req.params.id);
+        const {userId} = req.params;
+        const user = await User.findOne({firebaseUID: userId}).populate('username');
         if (!user) {
             return res.status(404).json({ message: "User not found." });
         }

@@ -1,14 +1,15 @@
-import React, {useEffect, useState} from "react";
-import {BrowserRouter as Router, Routes, Route} from 'react-router-dom';
-import { onAuthStateChanged } from 'firebase/auth';
+import React, { useEffect, useState } from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./firebase";
 import Login from "./pages/Login";
 import Home from "./pages/Home";
 import Signup from "./pages/Signup";
+import ServerDashboard from "./pages/ServerDashboard";
 
 const App = () => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); // To prevent flicker on load
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
@@ -21,18 +22,20 @@ const App = () => {
 
   if (loading) {
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-100">
-            <p className="text-gray-600">Loading...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <p className="text-gray-600">Loading...</p>
+      </div>
     );
-}
+  }
+
   return (
     <Router>
       <Routes>
-        <Route path="/" element={!user ? <Login/> : <Home />} />
-        <Route path="/home" element={<Home userId={user?.uid}/>} />
+        <Route path="/" element={!user ? <Login /> : <Home />} />
+        <Route path="/home" element={<Home userId={user?.uid} />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/server/:serverId" element={<ServerDashboard />} />
       </Routes>
     </Router>
   );

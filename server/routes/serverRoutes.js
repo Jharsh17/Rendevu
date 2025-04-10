@@ -12,7 +12,7 @@ router.post('/create', async (req, res) => {
             return res.status(400).json({ message: 'Server name and owner are required.' });
         }
 
-        const server = new Server({ name, owner, members });
+        const server = new Server({ name, owner, members: [owner] });
         const savedServer = await server.save();
         res.status(201).json(savedServer);
     } catch (error) {
@@ -21,13 +21,15 @@ router.post('/create', async (req, res) => {
     }
 });
 
-// Get all servers
-router.get('/', async (req, res) => {
+// Get all servers for a user
+router.get('/user/:userId', async (req, res) => {
     try {
-        const servers = await Server.find().populate('owner', 'username email');
+        const { userId } = req.params;
+        const servers = await Server.find({members: userId});
         res.status(200).json(servers);
     } catch (error) {
-        res.status(500).json({ message: 'Error fetching servers', error: error.message });
+        console.error('Error fetching servers for user:', error.message);
+        res.status(500).json({ message: 'Internal server error', error: error.message });
     }
 });
 

@@ -9,6 +9,7 @@ const LogoutButton = () => {
         try {
             await signOut(auth);
             navigate('/');      // redirect to login page
+            console.log("Logout Successful");
         } catch (error) {
             console.error("Logout Failed", error.message);
         }

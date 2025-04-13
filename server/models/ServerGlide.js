@@ -6,7 +6,7 @@ const serverSchema = new mongoose.Schema({
     icon: { type: String },
     owner: { type: mongoose.Schema.Types.String, ref: 'User', required: true },
     members: [{ type: mongoose.Schema.Types.String, ref: 'User' }],
-    channels: [{ type: mongoose.Schema.Types.String, ref: 'Channel' }],
+    channels: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Channel' }],
 }, { timestamps: true });
 
 module.exports = mongoose.model('Server', serverSchema);

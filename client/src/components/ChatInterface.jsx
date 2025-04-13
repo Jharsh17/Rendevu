@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const ChatInterface = ({ channelId }) => {
+const ChatInterface = ({ channelId, userId }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
 
@@ -23,10 +23,10 @@ const ChatInterface = ({ channelId }) => {
 
   const handleSendMessage = async () => {
     try {
-      const res = await fetch(`/api/messages/send`, {
+      const res = await fetch(`/api/messages/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channelId, content: newMessage }),
+        body: JSON.stringify({ channelId, content: newMessage, sender: userId }),
       });
 
       const data = await res.json();
@@ -44,7 +44,7 @@ const ChatInterface = ({ channelId }) => {
       <div className="h-64 overflow-y-auto border p-4">
         {messages.map((message) => (
           <div key={message._id} className="mb-2">
-            <p className="font-medium">{message.sender}</p>
+            <p className="font-medium">{message.senderUsername}</p>
             <p>{message.content}</p>
           </div>
         ))}

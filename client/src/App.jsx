@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./firebase";
+
+// Page imports
 import Login from "./pages/Login";
 import Home from "./pages/Home";
 import Signup from "./pages/Signup";
@@ -31,11 +33,18 @@ const App = () => {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={!user ? <Login /> : <Home />} />
-        <Route path="/home" element={<Home userId={user?.uid} />} />
+        {/* Default route */}
+        <Route path="/" element={!user ? <Login /> : <Navigate to="/home" />} />
+
+        {/* Authenticated Home */}
+        <Route path="/home" element={user ? <Home userId={user.uid} /> : <Navigate to="/" />} />
+
+        {/* Public routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
-        <Route path="/server/:serverId" element={<ServerDashboard />} />
+
+        {/* Server Dashboard */}
+        <Route path="/server/:serverId" element={user ? <ServerDashboard /> : <Navigate to="/" />} />
       </Routes>
     </Router>
   );

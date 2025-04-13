@@ -31,6 +31,135 @@ router.post('/create', async (req, res) => {
     }
 });
 
+router.get('/search', async (req, res) => {
+    try {
+        const {username} = req.query;
+
+        //find user by username
+        const user = await User.findOne({username}, 'firebaseUID username email');
+        if(!user){
+            return res.status(404).json({message: "User not found"});
+        }
+
+        res.status(200).json(user);
+    } catch (err){
+        console.error("Error searching for user: ", err);
+        res.status(500).json({message: "Failed to search for user", error: err.message});
+    }
+});
+
+router.post('/sendFriendRequest', async (req, res) => {
+    try {
+        const { userId, friendId } = req.body;
+
+        // Validate both users exist
+        const user = await User.findOne({firebaseUID: userId});
+        const friend = await User.findOne({firebaseUID: friendId});
+
+        if(!user || !friend){
+            return res.status(404).json({message: "User not found"});
+        }
+
+        // check if a friend request is already sent
+        if(friend.friendRequests.includes(user._id)){
+            return res.status(400).json({message: "Friend request already sent"})
+        }
+
+        // check if they are already friends
+        if(friend.friends.includes(user._id)){
+            return res.status(400).json({message: "This user is already in your Friends list"})
+        }
+
+        // add friend request
+        friend.friendRequests.push(user._id);
+        await friend.save();
+
+        res.status(200).json({message: "Friend request sent successfully"});
+    } catch (err) {
+        console.error("Error sending friend request:", err);
+        res.status(500).json({ message: "Failed to send friend request", error: err.message });
+    }
+});
+
+router.post('/acceptFriendRequest', async (req, res) => {
+    try {
+        const {userId, friendId} = req.body;
+
+        // Validate both users exist
+        const user = await User.findOne({firebaseUID: userId});
+        const friend = await User.findOne({firebaseUID: friendId});
+        if(!user || !friend){
+            return res.status(404).json({message: "User or Friend not found"});
+        }
+    
+        // check if a friend request already exists
+        if(!user.friendRequests.includes(friend._id)){
+            return res.status(400).json({message: "No friend request found"})
+        }
+        
+
+        // add each other as friends
+        user.friends.push(friend._id);
+        friend.friends.push(user._id);
+
+        // remove friend request from user
+        user.friendRequests = user.friendRequests.filter(id => id.toString() !== friend._id.toString());
+
+        await user.save();
+        await friend.save();
+
+        res.status(200).json({message: "Friend request accepted successfully"});
+    } catch (err) {
+        console.error("Error accepting friend request:", err);
+        res.status(500).json({ message: "Failed to accept friend request", error: err.message });
+    }
+});
+
+router.post('/rejectFriendRequest', async (req, res) => {
+    try {
+        const {userId, friendId} = req.body;
+
+        // Validate both users exist
+        const user = await User.findOne({firebaseUID: userId});
+        const friend = await User.findOne({firebaseUID: friendId});
+
+        if(!user || !friend){
+            return res.status(404).json({message: "User or Friend not found"});
+        }
+
+        // check if a friend request already exists
+        if(!user.friendRequests.includes(friend._id)){
+            return res.status(400).json({message: "No friend request found"})
+        }
+
+        // remove friend request from user
+        user.friendRequests = user.friendRequests.filter(id => id !== friend._id);
+
+        await user.save();
+
+        res.status(200).json({message: "Friend request rejected successfully"});
+    } catch (err) {
+        console.error("Error rejecting friend request:", err);
+        res.status(500).json({ message: "Failed to reject friend request", error: err.message });
+    }
+});
+
+router.get('/:userId/friendRequests', async (req, res) => {
+    try {
+        const {userId} = req.params;
+        const userinfo = await User.findOne({firebaseUID: userId})
+        const user = await User.findById(userinfo._id).populate('friendRequests', 'firebaseUID username email');
+        if(!user){
+            return res.status(404).json({message: "User not found"});
+        }
+        console.log("Friend requests: ", user);
+        res.status(200).json(user);
+    } catch (err) {
+        console.error("Error fetching friend requests: ", err);
+        res.status(500).json({message: "Failed to fetch friend requests", error : err.message});
+    }
+});
+
 // Get user by ID
 router.get('/:userId', async (req, res) => {
     try {

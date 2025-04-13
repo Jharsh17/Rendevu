@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import CreateChannel from "../components/CreateChannel";
 import ChatInterface from "../components/ChatInterface";
 
-const ServerDashboard = () => {
+const ServerDashboard = ({userId}) => {
   const { serverId } = useParams();
   const navigate = useNavigate();
   const [channels, setChannels] = useState([]);
@@ -67,7 +67,7 @@ const ServerDashboard = () => {
         {selectedChannel ? (
           <div className="w-full">
             <h2 className="text-lg font-medium mb-4">Chat: {selectedChannel.name}</h2>
-            <ChatInterface channelId={selectedChannel._id} />
+            <ChatInterface channelId={selectedChannel._id} userId={userId} />
           </div>
         ) : (
           <div className="text-center text-gray-400">

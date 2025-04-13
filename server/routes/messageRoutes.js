@@ -7,21 +7,22 @@ const Channel = require('../models/Channel'); // (optional) if you want to valid
 // Create a new message
 router.post('/create', async (req, res) => {
     try {
-        const { content, sender, channel } = req.body;
+        console.log("Request body:", req.body);
+        const { content, sender, channelId } = req.body;
 
         // Check if sender exists in User collection
-        const userExists = await User.findById(sender);
+        const userExists = await User.findOne({firebaseUID: sender});
         if (!userExists) {
             return res.status(400).json({ message: "Invalid sender: user not found" });
         }
 
         // Optional: Check if channel exists
-        const channelExists = await Channel.findById(channel);
+        const channelExists = await Channel.findById(channelId);
         if (!channelExists) {
             return res.status(400).json({ message: "Invalid channel: channel not found" });
         }
 
-        const message = new Message({ content, sender, channel });
+        const message = new Message({ content, sender, channelId });
         const savedMessage = await message.save();
 
         res.status(201).json(savedMessage);
@@ -35,11 +36,29 @@ router.post('/create', async (req, res) => {
 // Get messages for a specific channel
 router.get('/channel/:channelId', async (req, res) => {
     try {
-        const messages = await Message.find({ channel: req.params.channelId })
-            .populate('sender', 'username')
+        const messages = await Message.find({ channelId: req.params.channelId })
             .sort({ createdAt: 1 });
 
-        res.status(200).json(messages);
+        // Get all unique sender IDs (firebaseUIDs)
+        const senderIds = [...new Set(messages.map(msg => msg.sender))];
+
+        // Fetch usernames for those IDs
+        const users = await User.find({ firebaseUID: { $in: senderIds } }, 'firebaseUID username');
+
+        // Map sender UID to username
+        const uidToUsername = {};
+        users.forEach(user => {
+            uidToUsername[user.firebaseUID] = user.username;
+        });
+
+        // Attach username to each message
+        const messagesWithUsernames = messages.map(msg => ({
+            ...msg.toObject(),
+            senderUsername: uidToUsername[msg.sender] || 'Unknown',
+        }));
+
+        console.log("Fetched messages:", messagesWithUsernames); // Debugging line
+        res.status(200).json(messagesWithUsernames);
     } catch (err) {
         console.error("Error fetching messages:", err);
         res.status(500).json({ message: "Failed to fetch messages", error: err.message });

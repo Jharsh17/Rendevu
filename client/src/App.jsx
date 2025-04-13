@@ -44,7 +44,7 @@ const App = () => {
         <Route path="/signup" element={<Signup />} />
 
         {/* Server Dashboard */}
-        <Route path="/server/:serverId" element={user ? <ServerDashboard /> : <Navigate to="/" />} />
+        <Route path="/server/:serverId" element={user ? <ServerDashboard userId={user.uid}/> : <Navigate to="/" />} />
       </Routes>
     </Router>
   );

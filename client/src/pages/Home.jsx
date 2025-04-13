@@ -2,12 +2,15 @@ import React, { useEffect, useState } from 'react';
 import UsernameSetup from '../components/UsernameSetup';
 import AddFriend from '../components/AddFriend';
 import LogoutButton from '../components/LogoutButton';
+import { useNavigate } from 'react-router-dom';
 
 const Home = ({ userId }) => {
     const [username, setUsername] = useState(null);
     const [servers, setServers] = useState([]);
     const [showAddServerModal, setShowAddServerModal] = useState(false);
     const [newServerName, setNewServerName] = useState('');
+    const navigate = useNavigate();
+        
 
     // Fetch username from backend if exists
     useEffect(() => {
@@ -77,9 +80,13 @@ const Home = ({ userId }) => {
                     <h2 className="text-lg font-semibold p-4 border-b">Servers</h2>
                     <ul className="p-4 space-y-2 flex-1 overflow-y-auto">
                         {servers.map((server) => (
-                            <li key={server._id} className="p-2 bg-gray-200 rounded-lg hover:bg-gray-300 cursor-pointer">
-                                {server.name}
-                            </li>
+                        <li
+                            key={server._id}
+                            className="p-2 bg-gray-200 rounded-lg hover:bg-gray-300 cursor-pointer"
+                            onClick={() => navigate(`/server/${server._id}`)}
+                        >
+                            {server.name}
+                        </li>
                         ))}
                     </ul>
                     <button 

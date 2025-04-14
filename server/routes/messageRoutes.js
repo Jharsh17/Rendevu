@@ -56,8 +56,7 @@ router.get('/channel/:channelId', async (req, res) => {
             ...msg.toObject(),
             senderUsername: uidToUsername[msg.sender] || 'Unknown',
         }));
-
-        console.log("Fetched messages:", messagesWithUsernames); // Debugging line
+        
         res.status(200).json(messagesWithUsernames);
     } catch (err) {
         console.error("Error fetching messages:", err);

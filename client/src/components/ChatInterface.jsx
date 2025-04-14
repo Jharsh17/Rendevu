@@ -1,10 +1,16 @@
 import { useState, useEffect } from "react";
+import {io} from "socket.io-client";
+
+const socket = io("http://localhost:5000");
 
 const ChatInterface = ({ channelId, userId }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
 
   useEffect(() => {
+    // Join the channel room
+    socket.emit("joinChannel", channelId);
+
     // Fetch messages for the channel
     const fetchMessages = async () => {
       try {
@@ -19,19 +25,54 @@ const ChatInterface = ({ channelId, userId }) => {
     };
 
     fetchMessages();
+
+    // Listen for incoming messages
+    
+    socket.on("receiveMessage", async (message) => {
+      if(!message.senderUsername){
+        try {
+          const res = await fetch(`/api/users/${message.sender}`);
+          const userData = await res.json();
+          if (res.ok) {
+            message.senderUsername = userData.username;
+          } else {
+            message.senderUsername = "Unknown";
+          }
+          console.log("Fetched sender username:", message.senderUsername);
+        } catch (err){
+          console.error("Error fetching sender username:", err);
+          message.senderUsername = "Unknown";
+        }
+      }
+
+      setMessages((prevMessages) => [...prevMessages, message]);
+    });
+
+    // Cleanup on component unmount
+    return () => {
+      socket.off("receiveMessage");
+    };
   }, [channelId]);
 
   const handleSendMessage = async () => {
+    const messageData = {
+      channelId,
+      content: newMessage,
+      sender: userId,
+    };
+
+    // Emit the message to the server
+    socket.emit("sendMessage", messageData);
+
+    // Optionally, save the message to the database 
     try {
       const res = await fetch(`/api/messages/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channelId, content: newMessage, sender: userId }),
+        body: JSON.stringify(messageData),
       });
 
-      const data = await res.json();
       if (res.ok) {
-        setMessages((prevMessages) => [...prevMessages, data]);
         setNewMessage("");
       }
     } catch (error) {
@@ -40,12 +81,28 @@ const ChatInterface = ({ channelId, userId }) => {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="h-64 overflow-y-auto border p-4">
+    <div className="h-[90vh] flex flex-col border rounded-lg p-4 space-y-4">
+      <div className="h-full overflow-y-auto border p-4">
         {messages.map((message) => (
-          <div key={message._id} className="mb-2">
-            <p className="font-medium">{message.senderUsername}</p>
+          <div 
+            key={message._id || message.timestamp} 
+            className={`mb-2 flex ${
+              message.sender === userId ? "justify-end" : "justify-start"
+            }`}
+            >
+          <div
+            className={`p-2 rounded-lg ${
+              message.sender === userId
+                ? "bg-blue-500 text-white text-right"
+                : "bg-gray-200 text-black text-left"
+            }`}
+            style={{ maxWidth: "70%" }}
+          >
+            <p className="font-medium">
+              {message.sender === userId ? "You" : message.senderUsername}
+            </p>
             <p>{message.content}</p>
+            </div>
           </div>
         ))}
       </div>
@@ -58,9 +115,12 @@ const ChatInterface = ({ channelId, userId }) => {
         />
         <button
           onClick={handleSendMessage}
-          className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+          className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600"
         >
-          Send
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" class="size-6">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
+        </svg>
+
         </button>
       </div>
     </div>

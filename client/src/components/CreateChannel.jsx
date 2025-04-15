@@ -29,7 +29,6 @@ const CreateChannel = ({ serverId, onChannelCreated }) => {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-medium text-gray-700">Create a Channel</h2>
       <input
         className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         value={channelName}

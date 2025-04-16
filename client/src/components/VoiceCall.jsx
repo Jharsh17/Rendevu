@@ -1,100 +1,137 @@
 import React, { useEffect, useRef, useState } from 'react';
 import socket from '../sockets/voice';
 
-const VoiceCall = ({ channelId }) => {
+const VoiceCall = ({ channelId, onLeaveCall }) => {
   const localStreamRef = useRef(null);
   const remoteStreamRef = useRef(null);
   const peerConnectionRef = useRef(null);
-
   const [isCallActive, setIsCallActive] = useState(false);
+
+  const endCall = () => {
+    // 1. Stop and release local media stream
+    const localStream = localStreamRef.current?.srcObject;
+    if (localStream) {
+      localStream.getTracks().forEach((track) => track.stop());
+    }
+
+    // 2. Remove srcObject safely
+    if (localStreamRef.current) {
+      localStreamRef.current.srcObject = null;
+    }
+
+    if (remoteStreamRef.current) {
+      remoteStreamRef.current.srcObject = null;
+    }
+
+    // 3. Close peer connection
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.getSenders().forEach(sender => {
+        try {
+          peerConnectionRef.current.removeTrack(sender);
+        } catch (_) {}
+      });
+
+      peerConnectionRef.current.close();
+      peerConnectionRef.current = null;
+    }
+
+    // 4. Emit leave signal
+    socket.emit('leave-voice', channelId);
+
+    // 5. Remove all listeners (prevent ghost events)
+    socket.removeAllListeners('offer');
+    socket.removeAllListeners('answer');
+    socket.removeAllListeners('ice-candidate');
+
+    // 6. Update state
+    setIsCallActive(false);
+
+    // 7. Optional callback
+    if (onLeaveCall) onLeaveCall();
+  };
 
   useEffect(() => {
     const initCall = async () => {
-      // Step 1: Get audio from mic
-      const localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      localStreamRef.current.srcObject = localStream;
+      try {
+        const localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-      // Step 2: Connect to signaling server
-      socket.emit('join-voice', channelId);
+        if (localStreamRef.current) {
+          localStreamRef.current.srcObject = localStream;
+        }
 
-      // Step 3: Create peer connection
-      const peer = new RTCPeerConnection({
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-        ],
-      });
-      peerConnectionRef.current = peer;
+        socket.emit('join-voice', channelId);
 
-      // Step 4: Add local audio tracks
-      localStream.getTracks().forEach((track) => {
-        peer.addTrack(track, localStream);
-      });
-
-      // Step 5: Remote stream
-      const remoteStream = new MediaStream();
-      remoteStreamRef.current.srcObject = remoteStream;
-
-      peer.ontrack = (event) => {
-        event.streams[0].getAudioTracks().forEach((track) => {
-          remoteStream.addTrack(track);
+        const peer = new RTCPeerConnection({
+          iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
         });
-      };
+        peerConnectionRef.current = peer;
 
-      // Step 6: Handle ICE candidates
-      peer.onicecandidate = (event) => {
-        if (event.candidate) {
-          socket.emit('ice-candidate', {
-            to: channelId,
-            candidate: event.candidate,
+        localStream.getTracks().forEach((track) => {
+          peer.addTrack(track, localStream);
+        });
+
+        const remoteStream = new MediaStream();
+        if (remoteStreamRef.current) {
+          remoteStreamRef.current.srcObject = remoteStream;
+        }
+
+        peer.ontrack = (event) => {
+          event.streams[0].getAudioTracks().forEach((track) => {
+            remoteStream.addTrack(track);
           });
-        }
-      };
+        };
 
-      // Step 7: Listen to signaling events
-      socket.on('offer', async ({ from, offer }) => {
-        await peer.setRemoteDescription(new RTCSessionDescription(offer));
-        const answer = await peer.createAnswer();
-        await peer.setLocalDescription(answer);
-        socket.emit('answer', { to: from, answer });
-      });
+        peer.onicecandidate = (event) => {
+          if (event.candidate) {
+            socket.emit('ice-candidate', {
+              to: channelId,
+              candidate: event.candidate,
+            });
+          }
+        };
 
-      socket.on('answer', async ({ answer }) => {
-        await peer.setRemoteDescription(new RTCSessionDescription(answer));
-      });
+        socket.on('offer', async ({ from, offer }) => {
+          await peer.setRemoteDescription(new RTCSessionDescription(offer));
+          const answer = await peer.createAnswer();
+          await peer.setLocalDescription(answer);
+          socket.emit('answer', { to: from, answer });
+        });
 
-      socket.on('ice-candidate', async ({ candidate }) => {
-        try {
-          await peer.addIceCandidate(new RTCIceCandidate(candidate));
-        } catch (err) {
-          console.error('Error adding ICE candidate:', err);
-        }
-      });
+        socket.on('answer', async ({ answer }) => {
+          await peer.setRemoteDescription(new RTCSessionDescription(answer));
+        });
 
-      // Step 8: Create and send offer
-      const offer = await peer.createOffer();
-      await peer.setLocalDescription(offer);
-      socket.emit('offer', { to: channelId, offer });
+        socket.on('ice-candidate', async ({ candidate }) => {
+          try {
+            await peer.addIceCandidate(new RTCIceCandidate(candidate));
+          } catch (err) {
+            console.error('Error adding ICE candidate:', err);
+          }
+        });
 
-      setIsCallActive(true);
+        const offer = await peer.createOffer();
+        await peer.setLocalDescription(offer);
+        socket.emit('offer', { to: channelId, offer });
+
+        setIsCallActive(true);
+      } catch (error) {
+        console.error('Failed to start voice call:', error);
+        endCall(); // fallback cleanup
+      }
     };
 
     initCall();
 
     return () => {
-      // Cleanup
-      peerConnectionRef.current?.close();
-      socket.emit('leave-voice', channelId);
-      setIsCallActive(false);
+      endCall();
     };
   }, [channelId]);
 
   return (
     <div className="p-4 bg-gray-100 rounded-lg mt-4">
-      <h2 className="text-lg font-semibold mb-2">Voice Call Active</h2>
       <div className="flex flex-col gap-2">
         <audio ref={localStreamRef} autoPlay muted />
         <audio ref={remoteStreamRef} autoPlay />
-        <p className="text-sm text-gray-500">Connected to channel: {channelId}</p>
       </div>
     </div>
   );

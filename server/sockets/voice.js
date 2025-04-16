@@ -7,12 +7,17 @@ const setupVoiceSockets = (io) => {
         socket.to(channelId).emit('user-joined-voice', socket.id);
       });
   
-      socket.on('offer', ({ offer, to }) => {
-        socket.to(to).emit('offer', { offer, from: socket.id });
+      socket.on('offer', async ({ from, offer }) => {
+        console.log('Received offer from', from);
+        await peer.setRemoteDescription(new RTCSessionDescription(offer));
+        const answer = await peer.createAnswer();
+        await peer.setLocalDescription(answer);
+        socket.emit('answer', { to: from, answer });
       });
-  
-      socket.on('answer', ({ answer, to }) => {
-        socket.to(to).emit('answer', { answer, from: socket.id });
+      
+      socket.on('answer', async ({ answer }) => {
+        console.log('Received answer');
+        await peer.setRemoteDescription(new RTCSessionDescription(answer));
       });
   
       socket.on('ice-candidate', ({ candidate, to }) => {

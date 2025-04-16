@@ -171,55 +171,7 @@ const ServerDashboard = ({ userId }) => {
             </div>
         </div>
 
-        {/* <div className="mt-6">
-          <div className="mt-6">
-            <h2 className="text-lg font-medium mb-2">Text Channels</h2>
-            <ul className="space-y-2">
-              {textChannels.map((channel) => (
-                <li
-                  key={channel._id}
-                  className={`p-2 rounded-lg cursor-pointer border hover:bg-blue-100 ${
-                    selectedChannel?._id === channel._id ? "bg-blue-100" : "bg-white"
-                  }`}
-                  onClick={() => setSelectedChannel(channel)}
-                >
-                  # {channel.name}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="mt-6">
-            <h2 className="text-lg font-medium mb-2">Voice Channels</h2>
-            <ul className="space-y-2">
-              {voiceChannels.map((channel) => (
-                <li
-                  key={channel._id}
-                  className={`p-2 rounded-lg cursor-pointer border hover:bg-blue-100 ${
-                    selectedChannel?._id === channel._id ? "bg-blue-100" : "bg-white"
-                  }`}
-                  onClick={() => setSelectedChannel(channel)}
-                >
-                  🔊 {channel.name}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-        </div> */}
-        {/* {selectedChannel ? (
-        <div className="w-full">
-            <h2 className="text-lg font-medium mb-4">{selectedChannel.type === "text" ? `Chat: ${selectedChannel.name}` : `Voice: ${selectedChannel.name}`}</h2>
-            {selectedChannel.type === "text" ? (
-              <ChatInterface channelId={selectedChannel._id} userId={userId} />
-            ) : (
-              <VoiceCall channelId={selectedChannel._id} userId={userId} />
-            )}
-          </div>
-        ) : (
-          <div className="text-center text-gray-400">...</div>
-        )} */}
-
+        
         {/* Display Text and Voice Channels */}
         <div className="mt-6">
           {/* Text Channels */}
@@ -247,20 +199,37 @@ const ServerDashboard = ({ userId }) => {
               {voiceChannels.map((channel) => (
                 <li
                   key={channel._id}
-                  className={`p-2 rounded-lg cursor-pointer border hover:bg-blue-100 ${
+                  className={`p-2 rounded-lg cursor-pointer border flex items-center justify-between hover:bg-blue-100 ${
                     selectedChannel?._id === channel._id ? "bg-blue-100" : "bg-white"
                   }`}
                   onClick={() => setSelectedChannel(channel)}
                 >
-                  🔊 {channel.name}
-                  {/* Add join call button */}
+                  <span>🔊 {channel.name}</span>
+
                   {selectedChannel?._id === channel._id && (
-                    <button
-                      className="ml-4 bg-blue-500 text-white rounded-lg px-3 py-1 hover:bg-blue-600"
-                      onClick={() => setIsJoinVoiceCall(true)} // State to handle join functionality
-                    >
-                      Join Call
-                    </button>
+                    <div className="space-x-2 ml-4">
+                      {!isJoinVoiceCall ? (
+                        <button
+                          className="bg-blue-500 text-white rounded-lg px-3 py-1 hover:bg-blue-600"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsJoinVoiceCall(true);
+                          }}
+                        >
+                          Join Call
+                        </button>
+                      ) : (
+                        <button
+                          className="bg-red-500 text-white rounded-lg px-3 py-1 hover:bg-red-600"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsJoinVoiceCall(false);
+                          }}
+                        >
+                          End Call
+                        </button>
+                      )}
+                    </div>
                   )}
                 </li>
               ))}
@@ -277,48 +246,54 @@ const ServerDashboard = ({ userId }) => {
                 : `Voice: ${selectedChannel.name}`}
             </h2>
 
-            {/* Show Chat Interface for Text Channel */}
-            {selectedChannel.type === "text" ? (
-              <ChatInterface channelId={selectedChannel._id} userId={userId} />
-            ) : (
-              <div>
-                {/* Show Voice Call Option */}
-                {isJoinVoiceCall ? (
-                  <VoiceCall channelId={selectedChannel._id} userId={userId} />
-                ) : (
-                  <div className="text-center text-gray-400">
-                    <p>Click 'Join Call' to start the voice call</p>
-                  </div>
-                )}
-              </div>
+            {/* Only handle voice logic here */}
+            {selectedChannel.type === "voice" && (
+              isJoinVoiceCall ? (
+                <VoiceCall channelId={selectedChannel._id} userId={userId} />
+              ) : (
+                <div className="text-center text-gray-400">
+                  <p>Click 'Join Call' to start the voice call</p>
+                </div>
+              )
             )}
           </div>
         ) : (
-          <div className="text-center text-gray-400">Select a channel to start chatting or calling</div>
-        )}
-
-
-
-      </div>
-
-      {/* Right Content Area */}
-      <div className="w-2/3 p-6 bg-white flex items-center justify-center">
-        {selectedChannel ? (
-          <div className="w-full">
-            <h2 className="text-lg font-medium mb-4">Chat: {selectedChannel.name}</h2>
-            <ChatInterface channelId={selectedChannel._id} userId={userId} />
-          </div>
-        ) : (
           <div className="text-center text-gray-400">
-            <img
-              src="https://cdn-icons-png.flaticon.com/512/9068/9068756.png"
-              alt="No channel selected"
-              className="w-48 mx-auto mb-4 opacity-70"
-            />
-            <p className="text-lg">Select a channel to start chatting</p>
+            Select a channel to start chatting or calling
           </div>
         )}
+
+
+
       </div>
+
+{/* Right Content Area */}
+<div className="w-2/3 p-6 bg-white flex items-center justify-center">
+  {selectedChannel ? (
+    <div className="w-full">
+      {selectedChannel.type === "text" ? (
+        <>
+          <h2 className="text-lg font-medium mb-4">Chat: {selectedChannel.name}</h2>
+          <ChatInterface channelId={selectedChannel._id} userId={userId} />
+        </>
+      ) : (
+        <div className="text-center text-gray-400">
+          <p>Click 'Join Call' to start the voice call</p>
+        </div>
+      )}
+    </div>
+  ) : (
+    <div className="text-center text-gray-400">
+      <img
+        src="https://cdn-icons-png.flaticon.com/512/9068/9068756.png"
+        alt="No channel selected"
+        className="w-48 mx-auto mb-4 opacity-70"
+      />
+      <p className="text-lg">Select a channel to start chatting or calling</p>
+    </div>
+  )}
+</div>
+
         
         {/* Invite Friend Modal */}
         {isInviteModalOpen && (
